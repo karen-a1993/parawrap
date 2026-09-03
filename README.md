@@ -35,6 +35,27 @@ reflows it cleanly instead of stacking indents.
 A word wider than the target width (a URL, a long path) is placed alone
 on its own line rather than being split apart.
 
+Auto-detect a quote or list marker at the start of a paragraph and
+reapply it instead of rewrapping it as text, with `-a`:
+
+    $ parawrap -a -w 20 <<< "> the quick brown fox jumps over the lazy dog"
+    > the quick brown
+    > fox jumps over the
+    > lazy dog
+
+    $ parawrap -a -w 20 <<< "- the quick brown fox jumps over the lazy dog"
+    - the quick brown
+      fox jumps over the
+      lazy dog
+
+Quote markers (`>`, `>>`, ...) repeat on every wrapped line. List markers
+(`-`, `*`, `+`, `1.`, `2)`) appear once, and continuation lines get a
+blank hanging indent of the same width instead. `-a` can be combined
+with `-p` to add a prefix on top of a detected marker. A paragraph with
+more than one bulleted line and no blank line between items is left
+untouched, since there is no reliable way to tell where one item ends
+and the next begins.
+
 ## Install
 
 No dependencies beyond the standard library.

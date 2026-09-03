@@ -72,6 +72,68 @@ class WrapTextTableTests(unittest.TestCase):
                 self.assertEqual(wrap_text(text, width=width, prefix=prefix), expected)
 
 
+# (case name, input text, width, expected output)
+AUTO_PREFIX_CASES = [
+    (
+        "quote marker repeats on every wrapped line",
+        "> the quick brown fox jumps over the lazy dog",
+        20,
+        "> the quick brown\n> fox jumps over the\n> lazy dog",
+    ),
+    (
+        "already-wrapped quote lines collapse and reflow",
+        "> line one\n> line two\n> line three",
+        70,
+        "> line one line two line three",
+    ),
+    (
+        "bullet marker hangs at its own width",
+        "- the quick brown fox jumps over the lazy dog",
+        20,
+        "- the quick brown\n  fox jumps over the\n  lazy dog",
+    ),
+    (
+        "numbered marker hangs at matching width",
+        "10. the quick brown fox jumps over the lazy dog",
+        20,
+        "10. the quick brown\n    fox jumps over\n    the lazy dog",
+    ),
+    (
+        "text without a marker is untouched",
+        "the quick brown fox",
+        70,
+        "the quick brown fox",
+    ),
+    (
+        "several bullets sharing a paragraph are left alone",
+        "- item one\n- item two",
+        70,
+        "- item one - item two",
+    ),
+    (
+        "marker that cannot fit the width is dropped",
+        "> hi",
+        1,
+        "hi",
+    ),
+]
+
+
+class AutoPrefixTableTests(unittest.TestCase):
+    def test_cases(self):
+        for name, text, width, expected in AUTO_PREFIX_CASES:
+            with self.subTest(name):
+                self.assertEqual(
+                    wrap_text(text, width=width, auto_prefix=True), expected
+                )
+
+    def test_default_is_off(self):
+        text = "> quoted text"
+        # without auto_prefix, "> " is just the first word - it is not
+        # stripped or reapplied as a wrap prefix.
+        self.assertEqual(wrap_text(text, width=70), "> quoted text")
+
+
 # (case name, input text, expected display width)
 DISPLAY_WIDTH_CASES = [
     ("ascii", "hello", 5),
