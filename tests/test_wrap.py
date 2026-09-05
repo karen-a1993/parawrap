@@ -1,6 +1,6 @@
 import unittest
 
-from parawrap.wrap import wrap_text, display_width
+from parawrap.wrap import wrap_text, display_width, strip_ansi
 
 
 # (case name, input text, width, prefix, expected output)
@@ -141,6 +141,8 @@ DISPLAY_WIDTH_CASES = [
     ("cjk characters count double", "你好", 4),  # "ni hao"
     ("mixed ascii and wide", "a你b", 4),
     ("combining marks add no width", "é", 1),  # e + combining acute accent
+    ("ansi color codes add no width", "\x1b[31mred\x1b[0m", 3),
+    ("ansi reset with no color code", "plain\x1b[0m", 5),
 ]
 
 
@@ -149,6 +151,23 @@ class DisplayWidthTableTests(unittest.TestCase):
         for name, text, expected in DISPLAY_WIDTH_CASES:
             with self.subTest(name):
                 self.assertEqual(display_width(text), expected)
+
+
+class StripAnsiTests(unittest.TestCase):
+    def test_removes_color_codes(self):
+        self.assertEqual(strip_ansi("\x1b[31mred\x1b[0m"), "red")
+
+    def test_leaves_plain_text_untouched(self):
+        self.assertEqual(strip_ansi("plain text"), "plain text")
+
+    def test_wrapping_ignores_escape_codes_in_width(self):
+        # A colored word should wrap exactly like its plain equivalent -
+        # the escape codes must not count toward the line width.
+        colored = "\x1b[31mhello\x1b[0m \x1b[31mworld\x1b[0m"
+        self.assertEqual(
+            wrap_text(colored, width=5),
+            colored.replace(" ", "\n"),
+        )
 
 
 if __name__ == "__main__":

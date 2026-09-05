@@ -35,6 +35,11 @@ reflows it cleanly instead of stacking indents.
 A word wider than the target width (a URL, a long path) is placed alone
 on its own line rather than being split apart.
 
+ANSI color/style escape codes (e.g. from `grep --color` or a syntax
+highlighter) are measured as zero width, so colored text wraps the same
+as its plain equivalent instead of running short to make room for
+invisible bytes.
+
 Auto-detect a quote or list marker at the start of a paragraph and
 reapply it instead of rewrapping it as text, with `-a`:
 

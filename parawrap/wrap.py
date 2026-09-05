@@ -13,16 +13,28 @@ _QUOTE_RE = re.compile(r"^(>+ ?)")
 # blank hanging indent of the same width instead of repeating the bullet.
 _LIST_RE = re.compile(r"^([-*+]|\d{1,9}[.)]) +")
 
+# ANSI CSI sequences, e.g. "\x1b[31m" (red) or "\x1b[0m" (reset). These
+# take zero columns on screen, but are ordinary characters as far as
+# len()/east_asian_width() are concerned, so they have to be stripped
+# before measuring width rather than walked character by character.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;:]*[A-Za-z]")
+
+
+def strip_ansi(text):
+    """Remove ANSI CSI escape sequences (color/style codes) from text."""
+    return _ANSI_RE.sub("", text)
+
 
 def display_width(text):
     """Return the terminal column width of text.
 
     len() counts codepoints, not printed columns. East Asian wide and
-    fullwidth characters take two columns, and combining marks take
-    zero, so plain length is the wrong measure to wrap against.
+    fullwidth characters take two columns, combining marks take zero,
+    and ANSI escape codes take zero, so plain length is the wrong
+    measure to wrap against.
     """
     width = 0
-    for ch in text:
+    for ch in strip_ansi(text):
         if unicodedata.combining(ch):
             continue
         if unicodedata.east_asian_width(ch) in ("W", "F"):
