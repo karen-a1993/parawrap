@@ -153,6 +153,54 @@ class DisplayWidthTableTests(unittest.TestCase):
                 self.assertEqual(display_width(text), expected)
 
 
+# (case name, input text, width, expected output)
+HYPHENATE_CASES = [
+    (
+        "overlong word is broken with a trailing hyphen",
+        "supercalifragilisticexpialidocious",
+        10,
+        "supercali-\nfragilist-\nicexpiali-\ndocious",
+    ),
+    (
+        "trailing piece of a hyphenated word combines with the next word",
+        "supercalifragilisticexpialidocious hi",
+        10,
+        "supercali-\nfragilist-\nicexpiali-\ndocious hi",
+    ),
+    (
+        "urls are never hyphenated even if they overflow",
+        "https://example.com/a/very/long/path/that/does/not/fit",
+        20,
+        "https://example.com/a/very/long/path/that/does/not/fit",
+    ),
+    (
+        "email addresses are never hyphenated",
+        "someone@example-mail-host.com",
+        10,
+        "someone@example-mail-host.com",
+    ),
+    (
+        "word that already fits is left alone",
+        "hello world",
+        20,
+        "hello world",
+    ),
+]
+
+
+class HyphenateTableTests(unittest.TestCase):
+    def test_cases(self):
+        for name, text, width, expected in HYPHENATE_CASES:
+            with self.subTest(name):
+                self.assertEqual(
+                    wrap_text(text, width=width, hyphenate=True), expected
+                )
+
+    def test_default_is_off(self):
+        text = "supercalifragilisticexpialidocious"
+        self.assertEqual(wrap_text(text, width=10), text)
+
+
 class StripAnsiTests(unittest.TestCase):
     def test_removes_color_codes(self):
         self.assertEqual(strip_ansi("\x1b[31mred\x1b[0m"), "red")

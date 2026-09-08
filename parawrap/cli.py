@@ -33,6 +33,13 @@ def build_parser():
         help="detect a leading '> ' quote or '-'/'1.' list marker per "
              "paragraph and reapply it instead of rewrapping it as text",
     )
+    parser.add_argument(
+        "-y", "--hyphenate",
+        action="store_true",
+        help="break words wider than the target width across lines with "
+             "a '-', instead of letting them overflow (URLs and email "
+             "addresses are still kept intact)",
+    )
     return parser
 
 
@@ -48,7 +55,11 @@ def main(argv=None):
 
     try:
         result = wrap_text(
-            text, width=args.width, prefix=args.prefix, auto_prefix=args.auto_prefix
+            text,
+            width=args.width,
+            prefix=args.prefix,
+            auto_prefix=args.auto_prefix,
+            hyphenate=args.hyphenate,
         )
     except ValueError as exc:
         parser.error(str(exc))

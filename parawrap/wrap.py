@@ -19,6 +19,11 @@ _LIST_RE = re.compile(r"^([-*+]|\d{1,9}[.)]) +")
 # before measuring width rather than walked character by character.
 _ANSI_RE = re.compile(r"\x1b\[[0-9;:]*[A-Za-z]")
 
+# A word containing "/" (URL, file path) or "@" (email address) reads as
+# a single token where splitting anywhere breaks it, so hyphenation must
+# skip these even when they overflow the available width.
+_UNBREAKABLE_RE = re.compile(r"[/@]")
+
 
 def strip_ansi(text):
     """Remove ANSI CSI escape sequences (color/style codes) from text."""
@@ -132,13 +137,46 @@ def _prepare_paragraph(lines, auto_prefix):
     return text, marker, hanging
 
 
-def wrap_paragraph(paragraph, width, prefix="", subsequent_prefix=None):
+def _hyphenate_word(word, width):
+    """Split word into pieces that each fit width, joined by a '-'.
+
+    This isn't real hyphenation - there's no dictionary of syllable
+    breaks, just a cut wherever the running width would exceed the
+    limit. Good enough to stop one long word from blowing out an
+    otherwise-narrow column; not good enough to look typeset.
+
+    Returns [word] unchanged if width is too small to fit even one
+    character plus a trailing hyphen, or if the word doesn't need
+    more than one piece.
+    """
+    if width < 2:
+        return [word]
+    pieces = []
+    chunk = ""
+    chunk_width = 0
+    for ch in word:
+        ch_width = display_width(ch)
+        if chunk and chunk_width + ch_width + 1 > width:
+            pieces.append(chunk + "-")
+            chunk = ch
+            chunk_width = ch_width
+        else:
+            chunk += ch
+            chunk_width += ch_width
+    if chunk:
+        pieces.append(chunk)
+    return pieces if len(pieces) > 1 else [word]
+
+
+def wrap_paragraph(paragraph, width, prefix="", subsequent_prefix=None, hyphenate=False):
     """Wrap a single paragraph (no embedded blank lines) to width.
 
     Words are never split, so a word wider than the available width
     is placed alone on its own line and allowed to overflow - that is
     what keeps URLs and other long tokens intact instead of mangling
-    them.
+    them. If hyphenate is set, a word that overflows (and doesn't look
+    like a URL or email address) is instead broken across lines with
+    a trailing "-" at each break.
 
     subsequent_prefix, if given, is used for every line after the
     first instead of prefix - this is what lets a list marker like
@@ -156,20 +194,30 @@ def wrap_paragraph(paragraph, width, prefix="", subsequent_prefix=None):
     current_width = 0
     for word in words:
         word_width = display_width(word)
-        added_width = word_width if not current else current_width + 1 + word_width
-        if current and added_width > available:
-            lines.append((prefix if not lines else subsequent_prefix) + " ".join(current))
-            current = [word]
-            current_width = word_width
+        if hyphenate and word_width > available and not _UNBREAKABLE_RE.search(word):
+            pieces = _hyphenate_word(word, available)
         else:
-            current.append(word)
-            current_width = added_width
+            pieces = [word]
+        for i, piece in enumerate(pieces):
+            piece_width = display_width(piece)
+            added_width = piece_width if not current else current_width + 1 + piece_width
+            if current and added_width > available:
+                lines.append((prefix if not lines else subsequent_prefix) + " ".join(current))
+                current = [piece]
+                current_width = piece_width
+            else:
+                current.append(piece)
+                current_width = added_width
+            if i < len(pieces) - 1:
+                lines.append((prefix if not lines else subsequent_prefix) + " ".join(current))
+                current = []
+                current_width = 0
     if current:
         lines.append((prefix if not lines else subsequent_prefix) + " ".join(current))
     return lines
 
 
-def wrap_text(text, width=70, prefix="", auto_prefix=False):
+def wrap_text(text, width=70, prefix="", auto_prefix=False, hyphenate=False):
     """Rewrap text to width, preserving paragraph breaks.
 
     Blank lines separate paragraphs. All other whitespace (tabs,
@@ -182,6 +230,10 @@ def wrap_text(text, width=70, prefix="", auto_prefix=False):
     that marker is stripped before reflowing and reapplied to the
     wrapped output on top of prefix, instead of being treated as part
     of the words.
+
+    If hyphenate is set, words too wide to fit the available width are
+    broken across lines with a trailing "-" instead of being left to
+    overflow, except for words that look like a URL or email address.
     """
     if width - display_width(prefix) < 1:
         raise ValueError("width too small for prefix")
@@ -197,5 +249,7 @@ def wrap_text(text, width=70, prefix="", auto_prefix=False):
         )
         if not fits:
             full_prefix = full_subsequent = prefix
-        blocks.append(wrap_paragraph(para_text, width, full_prefix, full_subsequent))
+        blocks.append(
+            wrap_paragraph(para_text, width, full_prefix, full_subsequent, hyphenate=hyphenate)
+        )
     return "\n\n".join("\n".join(lines) for lines in blocks)

@@ -61,6 +61,22 @@ more than one bulleted line and no blank line between items is left
 untouched, since there is no reliable way to tell where one item ends
 and the next begins.
 
+By default a word wider than the target width (a URL, a long path) is
+placed alone on its own line rather than being split apart. Pass
+`-y`/`--hyphenate` to break such words across lines instead, with a
+trailing `-` at each break:
+
+    $ parawrap -y -w 10 <<< "supercalifragilisticexpialidocious"
+    supercali-
+    fragilist-
+    icexpiali-
+    docious
+
+This is a width-driven cut, not real dictionary hyphenation, so breaks
+don't respect syllable boundaries. URLs and email addresses (anything
+containing `/` or `@`) are still kept intact even with `-y`, since a
+broken URL is useless regardless of how it looks.
+
 ## Install
 
 No dependencies beyond the standard library.
