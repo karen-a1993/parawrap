@@ -168,7 +168,30 @@ def _hyphenate_word(word, width):
     return pieces if len(pieces) > 1 else [word]
 
 
-def wrap_paragraph(paragraph, width, prefix="", subsequent_prefix=None, hyphenate=False):
+def _justify_line(words, target_width):
+    """Stretch the gaps between words so the line fills target_width.
+
+    Extra columns are handed out to the leftmost gaps first, one at a
+    time, which is what makes repeated short lines ("a b c") look even
+    instead of dumping all the slack into a single gap. A one-word
+    line has no gap to stretch, so it's returned unchanged.
+    """
+    if len(words) <= 1:
+        return " ".join(words)
+    words_width = sum(display_width(w) for w in words)
+    gaps = len(words) - 1
+    total_space = max(target_width - words_width, gaps)
+    base, extra = divmod(total_space, gaps)
+    parts = []
+    for i, word in enumerate(words):
+        parts.append(word)
+        if i < gaps:
+            parts.append(" " * (base + (1 if i < extra else 0)))
+    return "".join(parts)
+
+
+def wrap_paragraph(paragraph, width, prefix="", subsequent_prefix=None, hyphenate=False,
+                    justify=False):
     """Wrap a single paragraph (no embedded blank lines) to width.
 
     Words are never split, so a word wider than the available width
@@ -181,6 +204,11 @@ def wrap_paragraph(paragraph, width, prefix="", subsequent_prefix=None, hyphenat
     subsequent_prefix, if given, is used for every line after the
     first instead of prefix - this is what lets a list marker like
     "- " appear once while later lines get a blank hanging indent.
+
+    If justify is set, the gaps between words on every line except
+    the paragraph's last are stretched so the line reaches exactly
+    width columns, the way `fmt -s` or a typeset paragraph would. The
+    last line is left ragged, as is any line with only one word.
     """
     if subsequent_prefix is None:
         subsequent_prefix = prefix
@@ -189,7 +217,7 @@ def wrap_paragraph(paragraph, width, prefix="", subsequent_prefix=None, hyphenat
     if not words:
         return []
 
-    lines = []
+    line_words = []
     current = []
     current_width = 0
     for word in words:
@@ -202,22 +230,32 @@ def wrap_paragraph(paragraph, width, prefix="", subsequent_prefix=None, hyphenat
             piece_width = display_width(piece)
             added_width = piece_width if not current else current_width + 1 + piece_width
             if current and added_width > available:
-                lines.append((prefix if not lines else subsequent_prefix) + " ".join(current))
+                line_words.append(current)
                 current = [piece]
                 current_width = piece_width
             else:
                 current.append(piece)
                 current_width = added_width
             if i < len(pieces) - 1:
-                lines.append((prefix if not lines else subsequent_prefix) + " ".join(current))
+                line_words.append(current)
                 current = []
                 current_width = 0
     if current:
-        lines.append((prefix if not lines else subsequent_prefix) + " ".join(current))
+        line_words.append(current)
+
+    last_index = len(line_words) - 1
+    lines = []
+    for idx, words_in_line in enumerate(line_words):
+        line_prefix = prefix if idx == 0 else subsequent_prefix
+        if justify and idx != last_index:
+            text = _justify_line(words_in_line, width - display_width(line_prefix))
+        else:
+            text = " ".join(words_in_line)
+        lines.append(line_prefix + text)
     return lines
 
 
-def wrap_text(text, width=70, prefix="", auto_prefix=False, hyphenate=False):
+def wrap_text(text, width=70, prefix="", auto_prefix=False, hyphenate=False, justify=False):
     """Rewrap text to width, preserving paragraph breaks.
 
     Blank lines separate paragraphs. All other whitespace (tabs,
@@ -234,6 +272,9 @@ def wrap_text(text, width=70, prefix="", auto_prefix=False, hyphenate=False):
     If hyphenate is set, words too wide to fit the available width are
     broken across lines with a trailing "-" instead of being left to
     overflow, except for words that look like a URL or email address.
+
+    If justify is set, every line except a paragraph's last is padded
+    with extra inter-word spacing so both margins line up.
     """
     if width - display_width(prefix) < 1:
         raise ValueError("width too small for prefix")
@@ -250,6 +291,9 @@ def wrap_text(text, width=70, prefix="", auto_prefix=False, hyphenate=False):
         if not fits:
             full_prefix = full_subsequent = prefix
         blocks.append(
-            wrap_paragraph(para_text, width, full_prefix, full_subsequent, hyphenate=hyphenate)
+            wrap_paragraph(
+                para_text, width, full_prefix, full_subsequent,
+                hyphenate=hyphenate, justify=justify,
+            )
         )
     return "\n\n".join("\n".join(lines) for lines in blocks)

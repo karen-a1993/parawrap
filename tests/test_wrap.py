@@ -201,6 +201,55 @@ class HyphenateTableTests(unittest.TestCase):
         self.assertEqual(wrap_text(text, width=10), text)
 
 
+# (case name, input text, width, prefix, expected output)
+JUSTIFY_CASES = [
+    (
+        "inter-word gaps stretch to fill the line, last line stays ragged",
+        "the quick brown fox jumps over the lazy dog",
+        20,
+        "",
+        "the  quick brown fox\njumps  over the lazy\ndog",
+    ),
+    (
+        "extra columns go to the leftmost gaps first",
+        "one two three four five six",
+        12,
+        "> ",
+        "> one    two\n> three four\n> five six",
+    ),
+    (
+        "a line with a single word cannot be stretched",
+        "supercalifragilisticexpialidocious",
+        20,
+        "",
+        "supercalifragilisticexpialidocious",
+    ),
+    (
+        "a paragraph that already fits on one line is left ragged",
+        "short line",
+        70,
+        "",
+        "short line",
+    ),
+]
+
+
+class JustifyTableTests(unittest.TestCase):
+    def test_cases(self):
+        for name, text, width, prefix, expected in JUSTIFY_CASES:
+            with self.subTest(name):
+                self.assertEqual(
+                    wrap_text(text, width=width, prefix=prefix, justify=True), expected
+                )
+
+    def test_default_is_off(self):
+        text = "the quick brown fox jumps over the lazy dog"
+        self.assertEqual(
+            wrap_text(text, width=20),
+            wrap_text(text, width=20, justify=False),
+        )
+
+
 class StripAnsiTests(unittest.TestCase):
     def test_removes_color_codes(self):
         self.assertEqual(strip_ansi("\x1b[31mred\x1b[0m"), "red")

@@ -77,6 +77,15 @@ don't respect syllable boundaries. URLs and email addresses (anything
 containing `/` or `@`) are still kept intact even with `-y`, since a
 broken URL is useless regardless of how it looks.
 
+Pass `-j`/`--justify` to pad inter-word spacing so both margins line up,
+the way `fmt -s` or a typeset paragraph would. A paragraph's last line is
+left ragged, and a line with only one word can't be stretched:
+
+    $ parawrap -j -w 20 <<< "the quick brown fox jumps over the lazy dog"
+    the  quick brown fox
+    jumps  over the lazy
+    dog
+
 ## Install
 
 No dependencies beyond the standard library.

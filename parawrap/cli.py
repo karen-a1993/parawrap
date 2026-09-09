@@ -40,6 +40,12 @@ def build_parser():
              "a '-', instead of letting them overflow (URLs and email "
              "addresses are still kept intact)",
     )
+    parser.add_argument(
+        "-j", "--justify",
+        action="store_true",
+        help="pad inter-word spacing so every line except a paragraph's "
+             "last reaches exactly the target width",
+    )
     return parser
 
 
@@ -60,6 +66,7 @@ def main(argv=None):
             prefix=args.prefix,
             auto_prefix=args.auto_prefix,
             hyphenate=args.hyphenate,
+            justify=args.justify,
         )
     except ValueError as exc:
         parser.error(str(exc))
