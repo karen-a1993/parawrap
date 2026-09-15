@@ -86,6 +86,17 @@ left ragged, and a line with only one word can't be stretched:
     jumps  over the lazy
     dog
 
+## Shell completion
+
+Print a completion script for bash or zsh with `--print-completion`:
+
+    $ parawrap --print-completion bash >> ~/.bashrc
+    $ parawrap --print-completion zsh > "${fpath[1]}/_parawrap"
+
+The script is generated from the same argument parser the CLI uses, so it
+stays in sync with the actual flags instead of being a second copy of
+them to maintain by hand.
+
 ## Install
 
 No dependencies beyond the standard library.
