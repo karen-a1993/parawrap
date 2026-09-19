@@ -4,15 +4,34 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "parawrap"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Reflow plain text to a fixed line width from the command line"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [{name = "karen-a1993"}]
+keywords = ["text", "wrap", "cli", "cjk", "terminal"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Text Processing :: Filters",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/karen-a1993/parawrap"
+Repository = "https://github.com/karen-a1993/parawrap"
 
 [project.scripts]
 parawrap = "parawrap.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "parawrap.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["parawrap*"]
