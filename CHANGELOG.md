@@ -30,5 +30,8 @@ grouped under Unreleased until the first version goes out.
   leaving a paragraph's last line and single-word lines ragged.
 - `--print-completion` to emit a bash or zsh completion script generated
   from the CLI's own argument parser.
+- `-V`/`--version` to print the installed version.
+- An unreadable or non-UTF-8 input file now exits with a usage error
+  instead of a traceback.
 - PyPI packaging metadata in `pyproject.toml`, with the version
   single-sourced from `parawrap.__version__`.

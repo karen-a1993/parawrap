@@ -3,6 +3,7 @@
 import argparse
 import sys
 
+from . import __version__
 from .wrap import wrap_text
 
 
@@ -45,6 +46,11 @@ def build_parser():
         action="store_true",
         help="pad inter-word spacing so every line except a paragraph's "
              "last reaches exactly the target width",
+    )
+    parser.add_argument(
+        "-V", "--version",
+        action="version",
+        version="%(prog)s {}".format(__version__),
     )
     parser.add_argument(
         "--print-completion",
@@ -111,8 +117,15 @@ def main(argv=None):
         return 0
 
     if args.file:
-        with open(args.file, encoding="utf-8") as f:
-            text = f.read()
+        # A missing file or bad encoding is a usage problem, not a crash;
+        # report it the way argparse reports other bad input.
+        try:
+            with open(args.file, encoding="utf-8") as f:
+                text = f.read()
+        except OSError as exc:
+            parser.error("cannot read {}: {}".format(args.file, exc.strerror))
+        except UnicodeDecodeError:
+            parser.error("{} is not valid UTF-8 text".format(args.file))
     else:
         text = sys.stdin.read()
 

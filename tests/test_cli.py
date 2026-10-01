@@ -1,7 +1,10 @@
 import io
+import os
+import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 
+from parawrap import __version__
 from parawrap.cli import build_parser, main, _bash_completion_script, _zsh_completion_script
 
 
@@ -50,6 +53,33 @@ class CompletionScriptTests(unittest.TestCase):
             status = main(["--print-completion", "zsh"])
         self.assertEqual(status, 0)
         self.assertIn("#compdef parawrap", out.getvalue())
+
+
+class VersionAndFileErrorTests(unittest.TestCase):
+    def test_version_flag_prints_package_version(self):
+        out = io.StringIO()
+        with redirect_stdout(out), self.assertRaises(SystemExit) as ctx:
+            main(["--version"])
+        self.assertEqual(ctx.exception.code, 0)
+        self.assertEqual(out.getvalue().strip(), "parawrap " + __version__)
+
+    def test_missing_file_exits_with_usage_error(self):
+        err = io.StringIO()
+        with redirect_stderr(err), self.assertRaises(SystemExit) as ctx:
+            main(["/nonexistent/parawrap-no-such-file.txt"])
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertIn("cannot read", err.getvalue())
+
+    def test_non_utf8_file_exits_with_usage_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "latin1.txt")
+            with open(path, "wb") as f:
+                f.write(b"caf\xe9 au lait")
+            err = io.StringIO()
+            with redirect_stderr(err), self.assertRaises(SystemExit) as ctx:
+                main([path])
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertIn("not valid UTF-8", err.getvalue())
 
 
 if __name__ == "__main__":
